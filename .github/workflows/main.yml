@@ -76,7 +76,7 @@ jobs:
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
 Package: decorator-app
-Version: 1.0-$(date +%Y%m%d%H%M)
+Version: 2.0-$(date +%Y%m%d%H%M)
 Section: devel
 Priority: optional
 Architecture: amd64
