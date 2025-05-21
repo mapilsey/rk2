@@ -26,9 +26,9 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    
+
     - name: Determine package version
-      id: get_version
+      id: version
       run: |
         if [[ $GITHUB_REF == refs/tags/v* ]]; then
           version=${GITHUB_REF#refs/tags/v}
@@ -37,12 +37,9 @@ jobs:
         else
           version=$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)
         fi
-        # Удаляем запрещенные символы
-        version=$(echo "${version}" | tr -cd '[:alnum:].-_')
         echo "version=${version}" >> $GITHUB_OUTPUT
         echo "PACKAGE_VERSION=${version}" >> $GITHUB_ENV
         echo "Using version: ${version}"
-        
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -53,18 +50,15 @@ jobs:
           dh-make \
           dpkg-dev \
           tree
-
     - name: Configure project
       run: |
         mkdir -p ${{ env.BUILD_DIR }}
         cd ${{ env.BUILD_DIR }}
         cmake -DCMAKE_BUILD_TYPE=Release ..
-
     - name: Build project
       run: |
         cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
-
     - name: Run tests
       run: |
         cd ${{ env.BUILD_DIR }}
@@ -73,14 +67,12 @@ jobs:
         [ -f test_BorderDecorator ] && ./test_BorderDecorator
         [ -f test_ScrollBarDecorator ] && ./test_ScrollBarDecorator
         [ -f test_main ] && ./test_main
-
     - name: Prepare package structure
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/usr/bin
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         find ${{ env.BUILD_DIR }} -maxdepth 1 -type f -executable -not -name "*.so" \
           -exec install -Dm755 {} ${{ env.PACKAGE_DIR }}/usr/bin/ \;
-
     - name: Generate control file
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
@@ -93,7 +85,6 @@ jobs:
         Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         Description: Decorator Pattern Implementation
         EOF
-
     - name: Build .deb package
       id: build-pkg
       run: |
@@ -101,68 +92,11 @@ jobs:
         DEB_FILE="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
         dpkg-deb --build ${{ env.PACKAGE_DIR }} "${DEB_FILE}"
         echo "deb_path=${DEB_FILE}" >> $GITHUB_OUTPUT
-        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
-        echo "Generated package:"
         ls -la ${{ env.ARTIFACTS_DIR }}
-        if [ ! -f "${DEB_FILE}" ]; then
-          echo "::error::Failed to create DEB file!"
-          exit 1
-        fi
-
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}-deb
-        path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
+        path: ${{ steps.build-pkg.outputs.deb_path }}
         retention-days: 7
-       
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: ${{ env.PACKAGE_NAME }}-deb
-        path: ${{ runner.temp }}/deb-pkg
-
-    - name: Verify downloaded files
-      run: |
-        echo "Downloaded files in deb-pkg:"
-        ls -la ${{ runner.temp }}/deb-pkg
-        DEB_FILE=$(find ${{ runner.temp }}/deb-pkg -name "*.deb" | head -1)
-        if [ -z "${DEB_FILE}" ]; then
-          echo "::error::No .deb files found in download directory!"
-          exit 1
-        fi
-        echo "Found DEB file: ${DEB_FILE}"
-        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
-
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
-        body: |
-          ### Release Details
-          - **Version**: ${{ needs.build.outputs.version }}
-          - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ env.DEB_FILE }}
-        asset_name: ${{ env.PACKAGE_NAME }}_${{ needs.build.outputs.version }}_amd64.deb
-        asset_content_type: application/vnd.debian.binary-package
+      
