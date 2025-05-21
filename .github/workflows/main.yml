@@ -3,7 +3,8 @@ name: Build, Test and Package
 on:
   push:
     tags:
-      - 'v*'  # Только при создании тегов вида v1.0, v2.0 и т.д.
+    branches: [main]
+      # - 'v*'  # Только при создании тегов вида v1.0, v2.0 и т.д.
   pull_request:
     branches: [main]
 
