@@ -27,28 +27,22 @@ jobs:
       with:
         fetch-depth: 0
     
-    - name: Debug git ref
-      run: |
-        echo "github.ref=${GITHUB_REF}" >> $GITHUB_OUTPUT
-        echo "GITHUB_REF=${GITHUB_REF}" >> $GITHUB_ENV
-        echo "Raw ref: ${GITHUB_REF}"
-
     - name: Determine package version
       id: get_version
       run: |
         if [[ $GITHUB_REF == refs/tags/v* ]]; then
           version=${GITHUB_REF#refs/tags/v}
-          echo "Using tag version: ${version}"
         elif [ -f VERSION ]; then
           version=$(cat VERSION)
-          echo "Using VERSION file: ${version}"
         else
           version=$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)
-          echo "Using date+hash version: ${version}"
         fi
+        # Удаляем запрещенные символы
+        version=$(echo "${version}" | tr -cd '[:alnum:].-_')
         echo "version=${version}" >> $GITHUB_OUTPUT
         echo "PACKAGE_VERSION=${version}" >> $GITHUB_ENV
-
+        echo "Using version: ${version}"
+        
     - name: Install dependencies
       run: |
         sudo apt-get update
@@ -107,50 +101,46 @@ jobs:
         DEB_FILE="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
         dpkg-deb --build ${{ env.PACKAGE_DIR }} "${DEB_FILE}"
         echo "deb_path=${DEB_FILE}" >> $GITHUB_OUTPUT
+        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
+        echo "Generated package:"
         ls -la ${{ env.ARTIFACTS_DIR }}
+        if [ ! -f "${DEB_FILE}" ]; then
+          echo "::error::Failed to create DEB file!"
+          exit 1
+        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}-deb
-        path: ${{ steps.build-pkg.outputs.deb_path }}
+        path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
         retention-days: 7
        
   release:
     needs: build
-    #if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-    - name: Verify asset exists
-      run: |
-        file_path="${{ runner.temp }}/deb-pkg/${{ env.PACKAGE_NAME }}_${{ needs.build.outputs.version }}_amd64.deb"
-        if [ ! -f "${file_path}" ]; then
-          echo "::error::DEB file not found at ${file_path}"
-          exit 1
-        fi
-        echo "File exists: ${file_path}"
-        ls -la "${file_path}"
-        
-    - name: Debug release info
-      run: |
-        echo "Tag: ${{ steps.get_tag.outputs.tag }}"
-        echo "Version: ${{ needs.build.outputs.version }}"
-        echo "Upload URL: ${{ steps.create_release.outputs.upload_url }}"        
-    
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}-deb
         path: ${{ runner.temp }}/deb-pkg
 
-    - name: Get tag name
-      id: get_tag
+    - name: Verify downloaded files
       run: |
-        tag=${GITHUB_REF#refs/tags/}
-        echo "tag=${tag}" >> $GITHUB_OUTPUT
+        echo "Downloaded files in deb-pkg:"
+        ls -la ${{ runner.temp }}/deb-pkg
+        DEB_FILE=$(find ${{ runner.temp }}/deb-pkg -name "*.deb" | head -1)
+        if [ -z "${DEB_FILE}" ]; then
+          echo "::error::No .deb files found in download directory!"
+          exit 1
+        fi
+        echo "Found DEB file: ${DEB_FILE}"
+        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
 
     - name: Create Release
       id: create_release
@@ -158,12 +148,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.get_tag.outputs.tag }}
+        tag_name: ${{ github.ref_name }}
         release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
         body: |
           ### Release Details
-          Version: ${{ needs.build.outputs.version }}
-          Build date: $(date -u '+%Y-%m-%d %H:%M UTC')
+          - **Version**: ${{ needs.build.outputs.version }}
+          - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
         draft: false
         prerelease: false
 
@@ -173,6 +163,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ runner.temp }}/deb-pkg/${{ env.PACKAGE_NAME }}_${{ needs.build.outputs.version }}_amd64.deb
+        asset_path: ${{ env.DEB_FILE }}
         asset_name: ${{ env.PACKAGE_NAME }}_${{ needs.build.outputs.version }}_amd64.deb
         asset_content_type: application/vnd.debian.binary-package
