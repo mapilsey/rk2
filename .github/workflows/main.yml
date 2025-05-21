@@ -99,4 +99,56 @@ jobs:
         name: ${{ env.PACKAGE_NAME }}-deb
         path: ${{ steps.build-pkg.outputs.deb_path }}
         retention-days: 7
-      
+
+  release:
+    needs: build
+    #if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ env.PACKAGE_NAME }}-deb
+        path: ${{ runner.temp }}/deb-pkg
+
+    - name: Verify downloaded files
+      run: |
+        echo "Downloaded files in deb-pkg:"
+        ls -la ${{ runner.temp }}/deb-pkg
+        DEB_FILE=$(find ${{ runner.temp }}/deb-pkg -name "*.deb" | head -1)
+        if [ -z "${DEB_FILE}" ]; then
+          echo "::error::No .deb files found in download directory!"
+          exit 1
+        fi
+        echo "Found DEB file: ${DEB_FILE}"
+        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
+        body: |
+          ### Release Details
+          - **Version**: ${{ needs.build.outputs.version }}
+          - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ${{ env.DEB_FILE }}
+        asset_name: ${{ env.PACKAGE_NAME }}_amd64.deb
+        asset_content_type: application/vnd.debian.binary-package
+
+
