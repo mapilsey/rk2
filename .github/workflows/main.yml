@@ -9,32 +9,34 @@ on:
   pull_request:
     branches: [main]
 
-
 env:
   BUILD_DIR: build
   PACKAGE_DIR: decorator-package
   ARTIFACTS_DIR: artifacts
   PACKAGE_NAME: decorator-app
-  
+
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
-    - name: Get version from tag
-      if: startsWith(github.ref, 'refs/tags/v')
-      id: get_version
+    - name: Determine package version
+      id: version
       run: |
-        version=${GITHUB_REF#refs/tags/v}
+        if [[ $GITHUB_REF == refs/tags/v* ]]; then
+          version=${GITHUB_REF#refs/tags/v}
+        elif [ -f VERSION ]; then
+          version=$(cat VERSION)
+        else
+          version=$(date +%Y.%m.%d)-$(git rev-parse --short HEAD)
+        fi
         echo "version=${version}" >> $GITHUB_OUTPUT
         echo "PACKAGE_VERSION=${version}" >> $GITHUB_ENV
-
-    - name: Set default version if not tagged
-      if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
-      run: |
-        echo "PACKAGE_VERSION=0.0.0" >> $GITHUB_ENV
+        echo "Using version: ${version}"
 
     - name: Install dependencies
       run: |
@@ -58,11 +60,6 @@ jobs:
         cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
 
-    - name: List build artifacts (debug)
-      run: |
-        cd ${{ env.BUILD_DIR }}
-        ls -la
-
     - name: Run tests
       run: |
         cd ${{ env.BUILD_DIR }}
@@ -76,8 +73,6 @@ jobs:
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/usr/bin
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
-        
-        # Копируем все исполняемые файлы
         find ${{ env.BUILD_DIR }} -maxdepth 1 -type f -executable -not -name "*.so" \
           -exec install -Dm755 {} ${{ env.PACKAGE_DIR }}/usr/bin/ \;
 
@@ -86,7 +81,7 @@ jobs:
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
         Package: ${{ env.PACKAGE_NAME }}
-        Version: ${PACKAGE_VERSION}-$(date +%Y%m%d%H%M)
+        Version: ${PACKAGE_VERSION}
         Section: devel
         Priority: optional
         Architecture: amd64
@@ -94,60 +89,24 @@ jobs:
         Description: Decorator Pattern Implementation
         EOF
 
-    - name: Verify package structure
-      run: |
-        tree ${{ env.PACKAGE_DIR }}
-        cat ${{ env.PACKAGE_DIR }}/DEBIAN/control
-
     - name: Build .deb package
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
         deb_file="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
         dpkg-deb --build ${{ env.PACKAGE_DIR }} "${deb_file}"
         echo "DEB_FILE=${deb_file}" >> $GITHUB_ENV
-
-    - name: Verify .deb package
-      run: |
-        dpkg --info ${DEB_FILE}
-        dpkg --contents ${DEB_FILE}
+        echo "Generated package:"
+        ls -la ${{ env.ARTIFACTS_DIR }}
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: decorator-package
-        path: ${DEB_FILE}
+        name: ${{ env.PACKAGE_NAME }}
+        path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
         retention-days: 7
-  
-  create-release:
-    needs: build-and-package
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: decorator-package
-        path: ${{ runner.temp }}/package
 
-    - name: List downloaded files (debug)
+    - name: Verify upload
       run: |
-        ls -la ${{ runner.temp }}/package
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        name: Release ${PACKAGE_VERSION}
-        tag_name: ${{ github.ref }}
-        body: |
-          ### Decorator Pattern Implementation
-          **Version**: ${PACKAGE_VERSION}
-          **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-          **Build date**: $(date -u)
-        files: |
-          ${{ runner.temp }}/package/*.deb
-        draft: false
-        prerelease: false
+        echo "Uploaded artifact: ${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
+        echo "Full path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
+        ls -la ${{ env.ARTIFACTS_DIR }}
