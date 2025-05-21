@@ -136,8 +136,6 @@ jobs:
         release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
         body: |
           ### Release Details
-          - **Version**: ${{ needs.build.outputs.version }}
-          - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
         draft: false
         prerelease: false
 
