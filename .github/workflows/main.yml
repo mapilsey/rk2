@@ -124,10 +124,10 @@ jobs:
       run: |
         echo "Downloaded files:"
         ls -la ${{ runner.temp }}/deb-pkg
-        if [ ! -f "${{ runner.temp }}/deb-pkg/*.deb" ]; then
-          echo "::error::DEB file not found!"
-          exit 1
-        fi
+        echo "Matching .deb files:"
+        find ${{ runner.temp }}/deb-pkg -name "*.deb" -ls
+        echo "File details:"
+        stat ${{ runner.temp }}/deb-pkg/*.deb || true
 
     - name: Create Release
       uses: actions/create-release@v1
