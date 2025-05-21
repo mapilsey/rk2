@@ -120,6 +120,15 @@ jobs:
         name: ${{ env.PACKAGE_NAME }}-deb
         path: ${{ runner.temp }}/deb-pkg
 
+    - name: Verify downloaded artifact
+      run: |
+        echo "Downloaded files:"
+        ls -la ${{ runner.temp }}/deb-pkg
+        if [ ! -f "${{ runner.temp }}/deb-pkg/*.deb" ]; then
+          echo "::error::DEB file not found!"
+          exit 1
+        fi
+
     - name: Create Release
       uses: actions/create-release@v1
       env:
@@ -127,15 +136,6 @@ jobs:
       with:
         tag_name: ${{ github.ref }}
         release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
-        body: |
-          ### Release Details
-          **Version**: ${{ needs.build.outputs.version }}
-          **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
-          
-          ### Installation
-          ```bash
-          sudo dpkg -i *.deb
-          ```
         draft: false
         prerelease: false
         files: |
