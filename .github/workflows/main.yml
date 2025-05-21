@@ -133,16 +133,11 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref_name }}
-        release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
+        release_name: ${{ env.PACKAGE_NAME }}
         body: |
           ### Release Details
           - **Version**: ${{ needs.build.outputs.version }}
           - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
-          - **Installation**:
-            ```bash
-            sudo dpkg -i ${{ env.PACKAGE_NAME }}_amd64.deb
-            sudo apt-get install -f  # Для установки зависимостей
-            ```
         draft: false
         prerelease: false
 
