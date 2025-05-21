@@ -8,7 +8,7 @@ on:
 
 env:
   BUILD_DIR: build
-  PACKAGE_DIR: decorator-package
+  PACKAGE_DIR: decorator-package  # Изменили на decorator-package для единообразия
   ARTIFACTS_DIR: artifacts
 
 jobs:
@@ -73,17 +73,18 @@ jobs:
 
     - name: Generate control file
       run: |
+        mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
-        Package: decorator-app
-        Version: 1.0-$(date +%Y%m%d%H%M)
-        Section: devel
-        Priority: optional
-        Architecture: amd64
-        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        Description: Decorator Pattern Implementation
-         Contains test executables for the decorator pattern implementation.
-         Includes: test_Window, test_FancyWindow, test_BorderDecorator, test_ScrollBarDecorator
-        EOF
+Package: decorator-app
+Version: 1.0-$(date +%Y%m%d%H%M)
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+Description: Decorator Pattern Implementation
+ Contains test executables for the decorator pattern implementation.
+ Includes: test_Window, test_FancyWindow, test_BorderDecorator, test_ScrollBarDecorator
+EOF
 
     - name: Verify package structure
       run: |
