@@ -5,11 +5,11 @@ on:
     tags:
       - 'v*'  # Только при создании тегов вида v1.0, v2.0 и т.д.
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 env:
   BUILD_DIR: build
-  PACKAGE_DIR: decorator-package  # Изменили на decorator-package для единообразия
+  PACKAGE_DIR: decorator-package
   ARTIFACTS_DIR: artifacts
   PACKAGE_NAME: decorator-app
   
@@ -27,6 +27,11 @@ jobs:
         version=${GITHUB_REF#refs/tags/v}
         echo "version=${version}" >> $GITHUB_OUTPUT
         echo "PACKAGE_VERSION=${version}" >> $GITHUB_ENV
+
+    - name: Set default version if not tagged
+      if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+      run: |
+        echo "PACKAGE_VERSION=0.0.0" >> $GITHUB_ENV
 
     - name: Install dependencies
       run: |
@@ -69,31 +74,24 @@ jobs:
         mkdir -p ${{ env.PACKAGE_DIR }}/usr/bin
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         
-        # Копируем все тестовые исполняемые файлы
-        for test in test_Window test_FancyWindow test_BorderDecorator test_ScrollBarDecorator test_main; do
-          if [ -f ${{ env.BUILD_DIR }}/$test ]; then
-            install -Dm755 ${{ env.BUILD_DIR }}/$test ${{ env.PACKAGE_DIR }}/usr/bin/
-          fi
-        done
-
-        # Если есть основной исполняемый файл, добавляем его тоже
-        if [ -f ${{ env.BUILD_DIR }}/decorator_app ]; then
-          install -Dm755 ${{ env.BUILD_DIR }}/decorator_app ${{ env.PACKAGE_DIR }}/usr/bin/
-        fi
+        # Копируем все исполняемые файлы
+        find ${{ env.BUILD_DIR }} -maxdepth 1 -type f -executable \
+          -not -name "*.so" \
+          -exec install -Dm755 {} ${{ env.PACKAGE_DIR }}/usr/bin/ \;
 
     - name: Generate control file
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
-        Package: ${{ env.PACKAGE_NAME }}
-        Version: ${{ env.PACKAGE_VERSION }}-$(date +%Y%m%d%H%M)
-        Section: devel
-        Priority: optional
-        Architecture: amd64
-        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        Description: Decorator Pattern Implementation
-        EOF
-        
+Package: ${{ env.PACKAGE_NAME }}
+Version: ${PACKAGE_VERSION}-$(date +%Y%m%d%H%M)
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+Description: Decorator Pattern Implementation
+EOF
+
     - name: Verify package structure
       run: |
         tree ${{ env.PACKAGE_DIR }}
@@ -102,45 +100,46 @@ jobs:
     - name: Build .deb package
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
-        dpkg-deb --build ${{ env.PACKAGE_DIR }} ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${{ env.PACKAGE_VERSION }}_amd64.deb
-
+        dpkg-deb --build ${{ env.PACKAGE_DIR }} ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
 
     - name: Verify .deb package
       run: |
-        dpkg --info ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
-        dpkg --contents ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
+        dpkg --info ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
+        dpkg --contents ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: decorator-package
-        path: ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
+        path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
         retention-days: 7
   
   create-release:
-      needs: build-and-package
-      runs-on: ubuntu-latest
-      permissions:
-        contents: write
-      steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: decorator-package
+    needs: build-and-package
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: decorator-package
+        path: ${{ runner.temp }}/package
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          name: Release ${{ env.PACKAGE_VERSION }}
-          tag_name: ${{ github.ref }}
-          body: |
-            ### Decorator Pattern Implementation
-            **Version**: ${{ env.PACKAGE_VERSION }}
-            **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
-            **Build date**: $(date -u)
-          files: |
-            *.deb
-          draft: false
-          prerelease: false
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        name: Release ${PACKAGE_VERSION}
+        tag_name: ${{ github.ref }}
+        body: |
+          ### Decorator Pattern Implementation
+          **Version**: ${PACKAGE_VERSION}
+          **Commit**: [${{ github.sha }}](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          **Build date**: $(date -u)
+        files: |
+          ${{ runner.temp }}/package/*.deb
+        draft: false
+        prerelease: false
