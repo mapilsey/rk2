@@ -155,7 +155,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ env.DEB_FILE }}
+        asset_path: ${{ runner.temp }}/deb-pkg/${{ env.PACKAGE_NAME }}_amd64.deb
         asset_name: ${{ env.PACKAGE_NAME }}_amd64.deb
         asset_content_type: application/vnd.debian.binary-package
 
