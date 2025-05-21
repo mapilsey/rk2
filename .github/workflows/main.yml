@@ -110,9 +110,11 @@ jobs:
        
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/v')  # Только для тегов
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v4
@@ -120,22 +122,23 @@ jobs:
         name: ${{ env.PACKAGE_NAME }}-deb
         path: ${{ runner.temp }}/deb-pkg
 
-    - name: Verify downloaded artifact
+    - name: Get tag name
+      id: get_tag
       run: |
-        echo "Downloaded files:"
-        ls -la ${{ runner.temp }}/deb-pkg
-        echo "Matching .deb files:"
-        find ${{ runner.temp }}/deb-pkg -name "*.deb" -ls
-        echo "File details:"
-        stat ${{ runner.temp }}/deb-pkg/*.deb || true
+        tag=${GITHUB_REF#refs/tags/}
+        echo "tag=${tag}" >> $GITHUB_OUTPUT
 
     - name: Create Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
+        tag_name: ${{ steps.get_tag.outputs.tag }}  # Используем чистый тег без refs/tags/
         release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
+        body: |
+          ### Release Details
+          Version: ${{ needs.build.outputs.version }}
+          Build date: $(date -u '+%Y-%m-%d %H:%M UTC')
         draft: false
         prerelease: false
         files: |
