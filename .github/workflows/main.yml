@@ -43,7 +43,7 @@ jobs:
         install -Dm755 build/test_BorderDecorator decorator-package/usr/bin/
         install -Dm755 build/test_ScrollBarDecorator decorator-package/usr/bin/
 
-- name: Generate control file
+    - name: Generate control file
       run: |
         mkdir -p package/DEBIAN
         cat > package/DEBIAN/control <<EOF
