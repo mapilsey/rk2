@@ -75,14 +75,14 @@ jobs:
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
-Package: decorator-app
-Version: 2.0-$(date +%Y%m%d%H%M)
-Section: devel
-Priority: optional
-Architecture: amd64
-Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-Description: Decorator
-EOF
+        Package: decorator-app
+        Version: 2.0-$(date +%Y%m%d%H%M)
+        Section: devel
+        Priority: optional
+        Architecture: amd64
+        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        Description: Decorator
+        EOF
 
     - name: Verify package structure
       run: |
