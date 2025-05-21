@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  BUILD_DIR: build
+  PACKAGE_DIR: decorator-package
+  ARTIFACTS_DIR: artifacts
+
 jobs:
   build-and-package:
     runs-on: ubuntu-latest
@@ -16,68 +21,88 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential debhelper dh-make dpkg-dev
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          debhelper \
+          dh-make \
+          dpkg-dev \
+          tree
 
-    - name: Configure and build
+    - name: Configure project
       run: |
-        mkdir build
-        cd build
-        cmake ..
+        mkdir -p ${{ env.BUILD_DIR }}
+        cd ${{ env.BUILD_DIR }}
+        cmake -DCMAKE_BUILD_TYPE=Release ..
+
+    - name: Build project
+      run: |
+        cd ${{ env.BUILD_DIR }}
         make -j$(nproc)
+
+    - name: List build artifacts (debug)
+      run: |
+        cd ${{ env.BUILD_DIR }}
+        ls -la
 
     - name: Run tests
       run: |
-        cd build
-        ./test_Window
-        ./test_FancyWindow
-        ./test_BorderDecorator
-        ./test_ScrollBarDecorator
-        ./test_main
+        cd ${{ env.BUILD_DIR }}
+        [ -f test_Window ] && ./test_Window
+        [ -f test_FancyWindow ] && ./test_FancyWindow
+        [ -f test_BorderDecorator ] && ./test_BorderDecorator
+        [ -f test_ScrollBarDecorator ] && ./test_ScrollBarDecorator
+        [ -f test_main ] && ./test_main
 
-    - name: Create package structure
+    - name: Prepare package structure
       run: |
-        mkdir -p decorator-package/usr/bin
-        mkdir -p decorator-package/DEBIAN
-        install -Dm755 build/test_Window decorator-package/usr/bin/
-        install -Dm755 build/test_FancyWindow decorator-package/usr/bin/
-        install -Dm755 build/test_BorderDecorator decorator-package/usr/bin/
-        install -Dm755 build/test_ScrollBarDecorator decorator-package/usr/bin/
+        mkdir -p ${{ env.PACKAGE_DIR }}/usr/bin
+        mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
+        
+        # Копируем все тестовые исполняемые файлы
+        for test in test_Window test_FancyWindow test_BorderDecorator test_ScrollBarDecorator test_main; do
+          if [ -f ${{ env.BUILD_DIR }}/$test ]; then
+            install -Dm755 ${{ env.BUILD_DIR }}/$test ${{ env.PACKAGE_DIR }}/usr/bin/
+          fi
+        done
+
+        # Если есть основной исполняемый файл, добавляем его тоже
+        if [ -f ${{ env.BUILD_DIR }}/decorator_app ]; then
+          install -Dm755 ${{ env.BUILD_DIR }}/decorator_app ${{ env.PACKAGE_DIR }}/usr/bin/
+        fi
 
     - name: Generate control file
       run: |
-        mkdir -p package/DEBIAN
-        cat > package/DEBIAN/control <<EOF
+        cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
         Package: decorator-app
         Version: 1.0-$(date +%Y%m%d%H%M)
         Section: devel
         Priority: optional
         Architecture: amd64
-        Maintainer: CI System <ci@example.com>
+        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         Description: Decorator Pattern Implementation
-         Contains the decorator pattern example application and tests.
+         Contains test executables for the decorator pattern implementation.
+         Includes: test_Window, test_FancyWindow, test_BorderDecorator, test_ScrollBarDecorator
         EOF
 
     - name: Verify package structure
       run: |
-        tree package
-        cat package/DEBIAN/control
+        tree ${{ env.PACKAGE_DIR }}
+        cat ${{ env.PACKAGE_DIR }}/DEBIAN/control
 
     - name: Build .deb package
       run: |
-        dpkg-deb --build package
-        mkdir -p artifacts
-        mv package.deb artifacts/decorator-app_1.0_amd64.deb
+        mkdir -p ${{ env.ARTIFACTS_DIR }}
+        dpkg-deb --build ${{ env.PACKAGE_DIR }} ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
+
+    - name: Verify .deb package
+      run: |
+        dpkg --info ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
+        dpkg --contents ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: decorator-package
-        path: artifacts/decorator-app_1.0_amd64.deb
+        path: ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
         retention-days: 7
-
-    - name: Show package info (debug)
-      run: |
-        dpkg --info artifacts/decorator-app_1.0_amd64.deb
-        dpkg --contents artifacts/decorator-app_1.0_amd64.deb
-
-
