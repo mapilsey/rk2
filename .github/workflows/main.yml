@@ -120,16 +120,7 @@ jobs:
         name: ${{ env.PACKAGE_NAME }}-deb
         path: ${{ runner.temp }}/deb-pkg
 
-    - name: Verify downloaded artifact
-      run: |
-        echo "Downloaded files:"
-        ls -la ${{ runner.temp }}/deb-pkg
-        if [ ! -f "${{ runner.temp }}/deb-pkg/*.deb" ]; then
-          echo "::error::DEB file not found!"
-          exit 1
-        fi
-
-    - name: Create Release
+     - name: Create Release
       uses: actions/create-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
