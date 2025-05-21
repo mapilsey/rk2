@@ -79,6 +79,7 @@ jobs:
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
         Package: ${{ env.PACKAGE_NAME }}
         Section: devel
+        Version: ${PACKAGE_VERSION}
         Priority: optional
         Architecture: amd64
         Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
