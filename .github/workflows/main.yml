@@ -1,0 +1,64 @@
+name: Build, Test and Package
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential debhelper dh-make
+
+    - name: Configure and build
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+        make -j$(nproc)
+
+    - name: Run tests
+      run: |
+        cd build
+        ./test_Window
+        ./test_FancyWindow
+        ./test_BorderDecorator
+        ./test_ScrollBarDecorator
+        ./test_main
+
+    - name: Create package directory structure
+      run: |
+        mkdir -p decorator-package/usr/bin
+        mkdir -p decorator-package/DEBIAN
+        cp build/test_Window decorator-package/usr/bin/
+        cp build/test_FancyWindow decorator-package/usr/bin/
+        cp build/test_BorderDecorator decorator-package/usr/bin/
+        cp build/test_ScrollBarDecorator decorator-package/usr/bin/
+
+    - name: Create control file
+      run: |
+        echo "Package: decorator" > decorator-package/DEBIAN/control
+        echo "Version: 1.0" >> decorator-package/DEBIAN/control
+        echo "Section: base" >> decorator-package/DEBIAN/control
+        echo "Architecture: amd64" >> decorator-package/DEBIAN/control
+        echo "Maintainer: Пилина Мария <mariiapilina@yandex.com>" >> decorator-package/DEBIAN/control
+        echo "Description: Decorator" >> decorator-package/DEBIAN/control
+
+    - name: Build .deb package
+      run: |
+        dpkg-deb --build decorator-package
+        mv decorator-package.deb decorator-app_1.0_amd64.deb
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: decorator-package
+        path: decorator-app_1.0_amd64.deb
