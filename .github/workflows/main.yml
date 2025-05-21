@@ -83,14 +83,14 @@ jobs:
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
-Package: ${{ env.PACKAGE_NAME }}
-Version: ${PACKAGE_VERSION}-$(date +%Y%m%d%H%M)
-Section: devel
-Priority: optional
-Architecture: amd64
-Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-Description: Decorator Pattern Implementation
-EOF
+        Package: ${{ env.PACKAGE_NAME }}
+        Version: ${PACKAGE_VERSION}-$(date +%Y%m%d%H%M)
+        Section: devel
+        Priority: optional
+        Architecture: amd64
+        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+        Description: Decorator Pattern Implementation
+        EOF
 
     - name: Verify package structure
       run: |
