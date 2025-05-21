@@ -123,7 +123,7 @@ jobs:
         fi
         
   release:
-    needs: build
+    needs: build-and-package
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Необходимо для создания релиза
