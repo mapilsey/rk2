@@ -105,3 +105,27 @@ jobs:
         name: decorator-package
         path: ${{ env.ARTIFACTS_DIR }}/decorator-app_1.0_amd64.deb
         retention-days: 7
+  
+  create-release:
+    needs: build-and-package
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download built package
+      uses: actions/download-artifact@v4
+      with:
+        name: decorator-package
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ github.ref_name }}
+        tag_name: ${{ github.ref }}
+        body: |
+          Automatically built Decorator Pattern Implementation package
+          - Version: ${{ github.ref_name }}
+          - Commit: ${{ github.sha }}
+        files: |
+          decorator-app_*.deb
+        draft: false
+        prerelease: false
+
