@@ -122,31 +122,31 @@ jobs:
           exit 1
         fi
         
-release:
-  needs: build
-  runs-on: ubuntu-latest
-  permissions:
-    contents: write  # Необходимо для создания релиза
-  steps:
-  - name: Download artifact
-    uses: actions/download-artifact@v4
-    with:
-      name: deb-package
-      path: ${{ runner.temp }}/deb-pkg
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Необходимо для создания релиза
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: deb-package
+        path: ${{ runner.temp }}/deb-pkg
 
-  - name: Create Release
-    uses: actions/create-release@v1
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Автоматический токен
-    with:
-      tag_name: ${{ github.ref }}
-      release_name: Release ${{ needs.build.outputs.version }}
-      body: |
-        ### Собранные артефакты
-        * .deb пакет для Ubuntu/Debian
-        * Версия: ${{ needs.build.outputs.version }}
-        * Дата сборки: $(date -u '+%Y-%m-%d')
-      draft: false
-      prerelease: false
-      files: |
-        ${{ runner.temp }}/deb-pkg/*.deb
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Автоматический токен
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ needs.build.outputs.version }}
+        body: |
+          ### Собранные артефакты
+          * .deb пакет для Ubuntu/Debian
+          * Версия: ${{ needs.build.outputs.version }}
+          * Дата сборки: $(date -u '+%Y-%m-%d')
+        draft: false
+        prerelease: false
+        files: |
+          ${{ runner.temp }}/deb-pkg/*.deb
