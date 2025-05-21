@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential debhelper dh-make
+        sudo apt-get install -y cmake build-essential debhelper dh-make dpkg-dev
 
     - name: Configure and build
       run: |
@@ -34,14 +34,14 @@ jobs:
         ./test_ScrollBarDecorator
         ./test_main
 
-    - name: Create package directory structure
+    - name: Create package structure
       run: |
         mkdir -p decorator-package/usr/bin
         mkdir -p decorator-package/DEBIAN
-        cp build/test_Window decorator-package/usr/bin/
-        cp build/test_FancyWindow decorator-package/usr/bin/
-        cp build/test_BorderDecorator decorator-package/usr/bin/
-        cp build/test_ScrollBarDecorator decorator-package/usr/bin/
+        install -Dm755 build/test_Window decorator-package/usr/bin/
+        install -Dm755 build/test_FancyWindow decorator-package/usr/bin/
+        install -Dm755 build/test_BorderDecorator decorator-package/usr/bin/
+        install -Dm755 build/test_ScrollBarDecorator decorator-package/usr/bin/
 
     - name: Create control file
       run: |
@@ -51,14 +51,23 @@ jobs:
         echo "Architecture: amd64" >> decorator-package/DEBIAN/control
         echo "Maintainer: Пилина Мария <mariiapilina@yandex.com>" >> decorator-package/DEBIAN/control
         echo "Description: Decorator" >> decorator-package/DEBIAN/control
-
+    
     - name: Build .deb package
       run: |
-        dpkg-deb --build decorator-package
-        mv decorator-package.deb decorator-app_1.0_amd64.deb
+        dpkg-deb --build package
+        mkdir -p artifacts
+        mv package.deb artifacts/decorator-app_1.0_amd64.deb
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: decorator-package
-        path: decorator-app_1.0_amd64.deb
+        path: artifacts/decorator-app_1.0_amd64.deb
+        retention-days: 7
+
+    - name: Show package info (debug)
+      run: |
+        dpkg --info artifacts/decorator-app_1.0_amd64.deb
+        dpkg --contents artifacts/decorator-app_1.0_amd64.deb
+
+
