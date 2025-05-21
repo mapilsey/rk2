@@ -43,14 +43,18 @@ jobs:
         install -Dm755 build/test_BorderDecorator decorator-package/usr/bin/
         install -Dm755 build/test_ScrollBarDecorator decorator-package/usr/bin/
 
-    - name: Create control file
+- name: Generate control file
       run: |
-        echo "Package: decorator" > decorator-package/DEBIAN/control
-        echo "Version: 1.0" >> decorator-package/DEBIAN/control
-        echo "Section: base" >> decorator-package/DEBIAN/control
-        echo "Architecture: amd64" >> decorator-package/DEBIAN/control
-        echo "Maintainer: Пилина Мария <mariiapilina@yandex.com>" >> decorator-package/DEBIAN/control
-        echo "Description: Decorator" >> decorator-package/DEBIAN/control
+        cat > package/DEBIAN/control <<EOF
+        Package: decorator-app
+        Version: 1.0-$(date +%Y%m%d%H%M)
+        Section: devel
+        Priority: optional
+        Architecture: amd64
+        Maintainer: CI System <ci@example.com>
+        Description: Decorator Pattern Implementation
+         Contains the decorator pattern example application and tests.
+        EOF
     
     - name: Build .deb package
       run: |
