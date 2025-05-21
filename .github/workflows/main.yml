@@ -110,7 +110,6 @@ jobs:
        
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')  # Только для тегов
     runs-on: ubuntu-latest
     permissions:
       contents: write
