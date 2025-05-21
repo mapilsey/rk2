@@ -45,6 +45,7 @@ jobs:
 
 - name: Generate control file
       run: |
+        mkdir -p package/DEBIAN
         cat > package/DEBIAN/control <<EOF
         Package: decorator-app
         Version: 1.0-$(date +%Y%m%d%H%M)
@@ -55,7 +56,12 @@ jobs:
         Description: Decorator Pattern Implementation
          Contains the decorator pattern example application and tests.
         EOF
-    
+
+    - name: Verify package structure
+      run: |
+        tree package
+        cat package/DEBIAN/control
+
     - name: Build .deb package
       run: |
         dpkg-deb --build package
