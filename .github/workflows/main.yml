@@ -138,6 +138,11 @@ jobs:
           ### Release Details
           - **Version**: ${{ needs.build.outputs.version }}
           - **Build date**: $(date -u '+%Y-%m-%d %H:%M UTC')
+          - **Installation**:
+            ```bash
+            sudo dpkg -i ${{ env.PACKAGE_NAME }}_amd64.deb
+            sudo apt-get install -f  # Для установки зависимостей
+            ```
         draft: false
         prerelease: false
 
