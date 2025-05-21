@@ -90,23 +90,34 @@ jobs:
         EOF
 
     - name: Build .deb package
+      id: build-package
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
-        deb_file="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
-        dpkg-deb --build ${{ env.PACKAGE_DIR }} "${deb_file}"
-        echo "DEB_FILE=${deb_file}" >> $GITHUB_ENV
+        DEB_FILE="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
+        dpkg-deb --build ${{ env.PACKAGE_DIR }} "${DEB_FILE}"
+        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
+        echo "deb_file=${DEB_FILE}" >> $GITHUB_OUTPUT
         echo "Generated package:"
         ls -la ${{ env.ARTIFACTS_DIR }}
+        if [ ! -f "${DEB_FILE}" ]; then
+          echo "::error::DEB file was not created!"
+          exit 1
+        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PACKAGE_NAME }}
-        path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
+        path: ${{ steps.build-package.outputs.deb_file }}
         retention-days: 7
 
     - name: Verify upload
       run: |
-        echo "Uploaded artifact: ${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
-        echo "Full path: ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb"
+        echo "Attempting to upload: ${{ steps.build-package.outputs.deb_file }}"
         ls -la ${{ env.ARTIFACTS_DIR }}
+        if [ -f "${{ steps.build-package.outputs.deb_file }}" ]; then
+          echo "File exists and ready for upload"
+        else
+          echo "::error::File does not exist!"
+          exit 1
+        fi
