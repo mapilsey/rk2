@@ -49,7 +49,9 @@ jobs:
           debhelper \
           dh-make \
           dpkg-dev \
-          tree
+          tree \
+          libgtest-dev\
+          libmock-dev
           
     - name: Configure project
       run: |
