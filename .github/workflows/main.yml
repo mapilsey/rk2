@@ -51,9 +51,6 @@ jobs:
           dpkg-dev \
           tree \
           libgtest-dev\
-          googletest \           # Основная библиотека
-          google-mock
-          libgtest-dev     # Основной пакет GTest
           
               
     - name: Configure project
