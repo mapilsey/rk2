@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.get_version.outputs.version }}
-      deb_file: ${{ steps.build-pkg.outputs.deb_path }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -28,7 +27,7 @@ jobs:
         fetch-depth: 0
 
     - name: Determine package version
-      id: version
+      id: get_version
       run: |
         if [[ $GITHUB_REF == refs/tags/v* ]]; then
           version=${GITHUB_REF#refs/tags/v}
@@ -66,51 +65,42 @@ jobs:
     - name: Run tests
       run: |
         cd ${{ env.BUILD_DIR }}
-        [ -f test_Window ] && ./test_Window
-        [ -f test_FancyWindow ] && ./test_FancyWindow
-        [ -f test_BorderDecorator ] && ./test_BorderDecorator
-        [ -f test_ScrollBarDecorator ] && ./test_ScrollBarDecorator
-        [ -f test_main ] && ./test_main
+        ctest --output-on-failure
         
     - name: Prepare package structure
       run: |
         mkdir -p ${{ env.PACKAGE_DIR }}/usr/bin
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
-        find ${{ env.BUILD_DIR }} -maxdepth 1 -type f -executable -not -name "*.so" \
-          -exec install -Dm755 {} ${{ env.PACKAGE_DIR }}/usr/bin/ \;
-          
+        install -Dm755 ${{ env.BUILD_DIR }}/decorator_app ${{ env.PACKAGE_DIR }}/usr/bin/decorator_app
+        
     - name: Generate control file
       run: |
-        mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
-        Package: ${{ env.PACKAGE_NAME }}
-        Version: ${PACKAGE_VERSION}
-        Section: devel
-        Priority: optional
-        Architecture: amd64
-        Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
-        Description: Decorator Pattern Implementation
-        EOF
+Package: ${{ env.PACKAGE_NAME }}
+Version: ${PACKAGE_VERSION}
+Section: devel
+Priority: optional
+Architecture: amd64
+Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
+Description: Decorator Pattern Implementation
+EOF
         
     - name: Build .deb package
-      id: build-pkg
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
-        DEB_FILE="${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_amd64.deb"
-        dpkg-deb --build ${{ env.PACKAGE_DIR }} "${DEB_FILE}"
-        echo "deb_path=${DEB_FILE}" >> $GITHUB_OUTPUT
+        dpkg-deb --build ${{ env.PACKAGE_DIR }} ${{ env.ARTIFACTS_DIR }}/${{ env.PACKAGE_NAME }}_${PACKAGE_VERSION}_amd64.deb
         ls -la ${{ env.ARTIFACTS_DIR }}
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ env.PACKAGE_NAME }}-deb
-        path: ${{ steps.build-pkg.outputs.deb_path }}
+        name: deb-package
+        path: ${{ env.ARTIFACTS_DIR }}/*.deb
         retention-days: 7
 
   release:
     needs: build
-    #if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -119,44 +109,18 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: ${{ env.PACKAGE_NAME }}-deb
+        name: deb-package
         path: ${{ runner.temp }}/deb-pkg
     
-    - name: Verify downloaded files
-      run: |
-        echo "Downloaded files in deb-pkg:"
-        ls -la ${{ runner.temp }}/deb-pkg
-        DEB_FILE=$(find ${{ runner.temp }}/deb-pkg -name "*.deb" | head -1)
-        if [ -z "${DEB_FILE}" ]; then
-          echo "::error::No .deb files found in download directory!"
-          exit 1
-        fi
-        echo "Found DEB file: ${DEB_FILE}"
-        echo "DEB_FILE=${DEB_FILE}" >> $GITHUB_ENV
-
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        release_name: ${{ env.PACKAGE_NAME }} ${{ needs.build.outputs.version }}
+        name: Release ${{ github.ref_name }}
         body: |
-          ### Release Details
-          - **Version**: 
-          - **Build date**: 
+          Automated release for Decorator Pattern implementation
+          Version: ${{ needs.build.outputs.version }}
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ runner.temp }}/deb-pkg/${{ env.PACKAGE_NAME }}_amd64.deb
-        asset_name: ${{ env.PACKAGE_NAME }}_amd64.deb
-        asset_content_type: application/vnd.debian.binary-package
-
-
+        files: ${{ runner.temp }}/deb-pkg/*.deb
