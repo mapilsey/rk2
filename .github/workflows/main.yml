@@ -51,6 +51,8 @@ jobs:
           dpkg-dev \
           tree \
           libgtest-dev\
+          googletest \           # Основная библиотека
+          google-mock \
           libmock-dev
           
     - name: Configure project
