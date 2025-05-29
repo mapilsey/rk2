@@ -77,15 +77,18 @@ jobs:
         
     - name: Generate control file
       run: |
+        mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
         Package: ${{ env.PACKAGE_NAME }}
-        Version: ${PACKAGE_VERSION}
+        Version: ${emv.PACKAGE_VERSION}
         Section: devel
         Priority: optional
         Architecture: amd64
         Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
         Description: Decorator Pattern Implementation
-        EOF 
+
+        EOF
+
     - name: Build .deb package
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
