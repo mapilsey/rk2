@@ -83,8 +83,7 @@ Priority: optional
 Architecture: amd64
 Maintainer: ${{ github.actor }} <${{ github.actor }}@users.noreply.github.com>
 Description: Decorator Pattern Implementation
-EOF
-        
+        EOF 
     - name: Build .deb package
       run: |
         mkdir -p ${{ env.ARTIFACTS_DIR }}
