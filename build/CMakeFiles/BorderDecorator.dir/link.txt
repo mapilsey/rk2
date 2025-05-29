@@ -1,2 +1,0 @@
-/usr/bin/ar qc libBorderDecorator.a CMakeFiles/BorderDecorator.dir/src/decorators/BorderDecorator.cpp.o
-/usr/bin/ranlib libBorderDecorator.a

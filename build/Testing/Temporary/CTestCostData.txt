@@ -1,5 +1,0 @@
-WindowTest.DrawTest 1 0.00572154
-FancyWindowTest.DrawTest 1 0.00511207
-BorderDecoratorTest.DrawTest 1 0.00666384
-ScrollBarDecoratorTest.DrawTest 1 0.00749264
----

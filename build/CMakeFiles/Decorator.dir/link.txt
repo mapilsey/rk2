@@ -1,2 +1,0 @@
-/usr/bin/ar qc libDecorator.a CMakeFiles/Decorator.dir/src/decorators/Decorator.cpp.o CMakeFiles/Decorator.dir/src/decorators/BorderDecorator.cpp.o CMakeFiles/Decorator.dir/src/decorators/ScrollBarDecorator.cpp.o
-/usr/bin/ranlib libDecorator.a

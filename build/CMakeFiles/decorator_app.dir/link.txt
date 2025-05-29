@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/decorator_app.dir/app/main.cpp.o -o decorator_app  libWindow.a libFancyWindow.a libDecorator.a libBorderDecorator.a libScrollBarDecorator.a libWindow.a libDecorator.a

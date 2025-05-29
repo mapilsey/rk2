@@ -1,2 +1,0 @@
-/usr/bin/ar qc libFancyWindow.a CMakeFiles/FancyWindow.dir/src/windows/FancyWindow.cpp.o
-/usr/bin/ranlib libFancyWindow.a

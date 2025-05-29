@@ -1,2 +1,0 @@
-/usr/bin/ar qc libScrollBarDecorator.a CMakeFiles/ScrollBarDecorator.dir/src/decorators/ScrollBarDecorator.cpp.o
-/usr/bin/ranlib libScrollBarDecorator.a
