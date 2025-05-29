@@ -80,7 +80,7 @@ jobs:
         mkdir -p ${{ env.PACKAGE_DIR }}/DEBIAN
         cat <<EOF > ${{ env.PACKAGE_DIR }}/DEBIAN/control
         Package: ${{ env.PACKAGE_NAME }}
-        Version: ${emv.PACKAGE_VERSION}
+        Version: ${{ env.PACKAGE_VERSION }}
         Section: devel
         Priority: optional
         Architecture: amd64
