@@ -52,8 +52,7 @@ jobs:
           tree \
           libgtest-dev\
           googletest \           # Основная библиотека
-          google-mock \
-          libmock-dev
+          google-mock 
           
     - name: Configure project
       run: |
