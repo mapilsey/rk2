@@ -53,20 +53,8 @@ jobs:
           libgtest-dev\
           googletest \           # Основная библиотека
           google-mock
-          libgtest-dev \    # Основной пакет GTest
-          libgmock-dev      # Пакет для Google Mock
+          libgtest-dev     # Основной пакет GTest
           
-        # Компилируем и устанавливаем GTest
-        cd /usr/src/googletest
-        sudo cmake -B build -DCMAKE_BUILD_TYPE=Release
-        sudo cmake --build build
-        sudo cmake --install build
-        
-        # Компилируем и устанавливаем GMock
-        cd /usr/src/gmock
-        sudo cmake -B build -DCMAKE_BUILD_TYPE=Release
-        sudo cmake --build build
-        sudo cmake --install build 
               
     - name: Configure project
       run: |
