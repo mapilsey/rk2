@@ -1,8 +1,8 @@
-#include "Window.h"
-#include <memory>
+#include "core/Window.h"  // Исправленный путь
+#include <gtest/gtest.h>
 
-int main() {
+TEST(WindowTest, DrawTest) {
     Window window;
     window.draw();
-    return 0;
+    SUCCEED();
 }

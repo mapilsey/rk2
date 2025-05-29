@@ -1,8 +1,8 @@
-#include "FancyWindow.h"
-#include <memory>
+#include "windows/FancyWindow.h"  // Исправленный путь
+#include <gtest/gtest.h>
 
-int main() {
+TEST(FancyWindowTest, DrawTest) {
     FancyWindow window;
     window.draw();
-    return 0;
+    SUCCEED();
 }
