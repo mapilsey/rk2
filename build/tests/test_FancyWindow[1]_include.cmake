@@ -1,0 +1,5 @@
+if(EXISTS "/home/mapilsey/projects/rk2/build/tests/test_FancyWindow[1]_tests.cmake")
+  include("/home/mapilsey/projects/rk2/build/tests/test_FancyWindow[1]_tests.cmake")
+else()
+  add_test(test_FancyWindow_NOT_BUILT test_FancyWindow_NOT_BUILT)
+endif()

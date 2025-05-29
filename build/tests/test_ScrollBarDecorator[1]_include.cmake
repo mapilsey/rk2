@@ -1,0 +1,5 @@
+if(EXISTS "/home/mapilsey/projects/rk2/build/tests/test_ScrollBarDecorator[1]_tests.cmake")
+  include("/home/mapilsey/projects/rk2/build/tests/test_ScrollBarDecorator[1]_tests.cmake")
+else()
+  add_test(test_ScrollBarDecorator_NOT_BUILT test_ScrollBarDecorator_NOT_BUILT)
+endif()
